@@ -7,7 +7,7 @@
 #include "opentelemetry/detail/preprocessor.h"
 
 #ifndef OPENTELEMETRY_ABI_VERSION_NO
-#  define OPENTELEMETRY_ABI_VERSION_NO 1
+#  define OPENTELEMETRY_ABI_VERSION_NO 2
 #endif
 
 #define OPENTELEMETRY_VERSION "1.12.0"
