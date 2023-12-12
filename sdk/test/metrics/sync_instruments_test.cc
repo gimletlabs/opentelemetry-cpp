@@ -24,7 +24,7 @@ TEST(SyncInstruments, LongCounter)
   InstrumentDescriptor instrument_descriptor = {
       "long_counter", "description", "1", InstrumentType::kCounter, InstrumentValueType::kLong};
   std::unique_ptr<SyncWritableMetricStorage> metric_storage(new SyncMultiMetricStorage());
-  LongCounter<int64_t> counter(instrument_descriptor, std::move(metric_storage));
+  LongCounter counter(instrument_descriptor, std::move(metric_storage));
   counter.Add(10);
   counter.Add(10, opentelemetry::context::Context{});
 
@@ -71,6 +71,17 @@ TEST(SyncInstruments, LongUpDownCounter)
   counter.Add(10, opentelemetry::common::KeyValueIterableView<M>({}));
   counter.Add(10, opentelemetry::common::KeyValueIterableView<M>({}),
               opentelemetry::context::Context{});
+  // negative values
+  counter.Add(-10);
+  counter.Add(-10, opentelemetry::context::Context{});
+
+  counter.Add(-10,
+              opentelemetry::common::KeyValueIterableView<M>({{"abc", "123"}, {"xyz", "456"}}));
+  counter.Add(-10, opentelemetry::common::KeyValueIterableView<M>({{"abc", "123"}, {"xyz", "456"}}),
+              opentelemetry::context::Context{});
+  counter.Add(-10, opentelemetry::common::KeyValueIterableView<M>({}));
+  counter.Add(-10, opentelemetry::common::KeyValueIterableView<M>({}),
+              opentelemetry::context::Context{});
 }
 
 TEST(SyncInstruments, DoubleUpDownCounter)
@@ -98,9 +109,8 @@ TEST(SyncInstruments, LongHistogram)
   InstrumentDescriptor instrument_descriptor = {
       "long_histogram", "description", "1", InstrumentType::kHistogram, InstrumentValueType::kLong};
   std::unique_ptr<SyncWritableMetricStorage> metric_storage(new SyncMultiMetricStorage());
-  LongHistogram<int64_t> histogram(instrument_descriptor, std::move(metric_storage));
+  LongHistogram histogram(instrument_descriptor, std::move(metric_storage));
   histogram.Record(10, opentelemetry::context::Context{});
-  histogram.Record(-10, opentelemetry::context::Context{});  // This is ignored
 
   histogram.Record(10,
                    opentelemetry::common::KeyValueIterableView<M>({{"abc", "123"}, {"xyz", "456"}}),
@@ -129,3 +139,45 @@ TEST(SyncInstruments, DoubleHistogram)
   histogram.Record(10.10, opentelemetry::common::KeyValueIterableView<M>({}),
                    opentelemetry::context::Context{});
 }
+
+#if OPENTELEMETRY_ABI_VERSION_NO >= 2
+TEST(SyncInstruments, DoubleGauge)
+{
+  InstrumentDescriptor instrument_descriptor = {
+      "double_gauge", "description", "1", InstrumentType::kGauge, InstrumentValueType::kDouble};
+  std::unique_ptr<SyncWritableMetricStorage> metric_storage(new SyncMultiMetricStorage());
+  auto gauge = std::unique_ptr<opentelemetry::metrics::Gauge<double>>(
+      new DoubleGauge(instrument_descriptor, std::move(metric_storage)));
+  EXPECT_NO_THROW(gauge->Record(10.10, opentelemetry::context::Context{}));
+  EXPECT_NO_THROW(gauge->Record(-10.10, opentelemetry::context::Context{}));  // This is ignored.
+  EXPECT_NO_THROW(gauge->Record(std::numeric_limits<double>::quiet_NaN(),
+                                opentelemetry::context::Context{}));  // This is ignored too
+  EXPECT_NO_THROW(gauge->Record(std::numeric_limits<double>::infinity(),
+                                opentelemetry::context::Context{}));  // This is ignored too
+  EXPECT_NO_THROW(gauge->Record(
+      10.10, opentelemetry::common::KeyValueIterableView<M>({{"abc", "123"}, {"xyz", "456"}}),
+      opentelemetry::context::Context{}));
+  EXPECT_NO_THROW(gauge->Record(10.10, opentelemetry::common::KeyValueIterableView<M>({}),
+                                opentelemetry::context::Context{}));
+}
+
+TEST(SyncInstruments, LongGauge)
+{
+  InstrumentDescriptor instrument_descriptor = {"double_gauge", "description", "1",
+                                                InstrumentType::kGauge, InstrumentValueType::kLong};
+  std::unique_ptr<SyncWritableMetricStorage> metric_storage(new SyncMultiMetricStorage());
+  auto gauge = std::unique_ptr<opentelemetry::metrics::Gauge<uint64_t>>(
+      new LongGauge(instrument_descriptor, std::move(metric_storage)));
+  EXPECT_NO_THROW(gauge->Record(10, opentelemetry::context::Context{}));
+  EXPECT_NO_THROW(gauge->Record(std::numeric_limits<uint64_t>::quiet_NaN(),
+                                opentelemetry::context::Context{}));  // This is ignored too
+  EXPECT_NO_THROW(gauge->Record(std::numeric_limits<uint64_t>::infinity(),
+                                opentelemetry::context::Context{}));  // This is ignored too
+
+  EXPECT_NO_THROW(gauge->Record(
+      10, opentelemetry::common::KeyValueIterableView<M>({{"abc", "123"}, {"xyz", "456"}}),
+      opentelemetry::context::Context{}));
+  EXPECT_NO_THROW(gauge->Record(10, opentelemetry::common::KeyValueIterableView<M>({}),
+                                opentelemetry::context::Context{}));
+}
+#endif
