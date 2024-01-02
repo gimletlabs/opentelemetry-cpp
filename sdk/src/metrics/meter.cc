@@ -201,7 +201,7 @@ nostd::unique_ptr<opentelemetry::metrics::Gauge<double>> Meter::CreateDoubleGaug
   }
   InstrumentDescriptor instrument_descriptor = {
       std::string{name.data(), name.size()}, std::string{description.data(), description.size()},
-      std::string{unit.data(), unit.size()}, InstrumentType::kGauge, InstrumentValueType::kLong};
+      std::string{unit.data(), unit.size()}, InstrumentType::kGauge, InstrumentValueType::kDouble};
   auto storage = RegisterSyncMetricStorage(instrument_descriptor);
   return nostd::unique_ptr<metrics::Gauge<double>>{
       new DoubleGauge(instrument_descriptor, std::move(storage))};
